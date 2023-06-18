@@ -40,10 +40,7 @@
 						</svg>
 					</span>
 				</button>
-				<strong class="text-xl uppercase">Noted</strong>
-			</svelte:fragment>
-			<svelte:fragment slot="trail">
-				<Avatar initials="JD" width="w-10" background="bg-primary-500" />
+				<strong class="text-xl uppercase">Agent Based Model</strong>
 			</svelte:fragment>
 		</AppBar>
 	</svelte:fragment>
