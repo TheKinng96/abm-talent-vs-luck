@@ -39,9 +39,20 @@
 	$: if ($maxSkillLevel < $minSkillLevel) {
 		minSkillLevel.set($maxSkillLevel);
 	}
+
+	const minAssets = writable(10);
+	const maxAssets = writable(10);
+
+	$: if ($minAssets >= $maxAssets) {
+		maxAssets.set($minAssets);
+	}
+
+	$: if ($maxAssets <= $minAssets) {
+		minAssets.set($maxAssets);
+	}
 </script>
 
-<nav class="list-nav p-4 h-full flex flex-col">
+<form class="list-nav p-4 h-full flex flex-col">
 	<h3 class="pb-4">Settings</h3>
 
 	<ul class="controller">
@@ -104,6 +115,32 @@
 				/>
 			</div>
 		</li>
+
+		<h4>Agent Setting</h4>
+
+		<li class="pb-2">
+			<div class="field">
+				<label for="min_assets" class="flex-1">Min Skill Level</label>
+				<input
+					name="min_assets"
+					type="number"
+					class="rounded max-w-[50%]"
+					bind:value={$minAssets}
+				/>
+			</div>
+		</li>
+		<li class="pb-2">
+			<div class="field">
+				<label for="max_assets" class="flex-1">Max Skill Level</label>
+				<input
+					name="max_assets"
+					type="number"
+					class="rounded max-w-[50%]"
+					bind:value={$maxAssets}
+					min={$minAssets}
+				/>
+			</div>
+		</li>
 	</ul>
 
 	<span class="flex-1" />
@@ -122,4 +159,4 @@
 			on:click={endSimulation}>Speed Up</button
 		>
 	</div>
-</nav>
+</form>
