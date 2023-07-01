@@ -2,6 +2,7 @@
 	import { RangeSlider, drawerStore } from '@skeletonlabs/skeleton';
 	import { settingStore, isCurrentSettingEnded } from '$stores/setting.store';
 	import { writable } from 'svelte/store';
+	import { enhance } from '$app/forms';
 
 	let hasSettingEnded = false;
 
