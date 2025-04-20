@@ -1,5 +1,7 @@
 import { randomPosition, clamp } from './utils/random.js';
 
+const MAX_STEP_SIZE = 5;
+
 export class LuckEvent {
 	constructor(type, gridSize) {
 		this.type = type; // 'lucky' or 'unlucky'
@@ -8,9 +10,11 @@ export class LuckEvent {
 	}
 
 	move() {
-		const dx = Math.floor(Math.random() * 3) - 1; // -1, 0, or 1
-		const dy = Math.floor(Math.random() * 3) - 1; // -1, 0, or 1
+		// Generate random step between -MAX_STEP_SIZE and +MAX_STEP_SIZE
+		const dx = Math.floor(Math.random() * (2 * MAX_STEP_SIZE + 1)) - MAX_STEP_SIZE;
+		const dy = Math.floor(Math.random() * (2 * MAX_STEP_SIZE + 1)) - MAX_STEP_SIZE;
 
+		// Apply step and clamp to grid boundaries
 		this.x = clamp(this.x + dx, 0, this.gridSize - 1);
 		this.y = clamp(this.y + dy, 0, this.gridSize - 1);
 	}
