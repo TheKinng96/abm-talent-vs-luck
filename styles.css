@@ -6,6 +6,18 @@ body {
 }
 .controls {
 	margin-bottom: 1em;
+	padding: 10px;
+	border: 1px solid #eee;
+	display: flex; /* Arrange controls horizontally */
+	flex-wrap: wrap; /* Allow wrapping on small screens */
+	align-items: center; /* Align items vertically */
+	gap: 10px; /* Add spacing between controls */
+}
+.controls hr {
+	width: 100%;
+	border: none;
+	border-top: 1px solid #eee;
+	margin: 5px 0;
 }
 .simulation-container {
 	width: 603px; /* 201 cells * 3px/cell */
