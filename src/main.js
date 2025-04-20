@@ -6,7 +6,7 @@ import { drawHistogram } from './utils/hist.js';
 // --- Config ---
 const GRID_SIZE = 201;
 const NUM_AGENTS = 1000;
-const NUM_EVENTS = 100;
+const NUM_EVENTS = 1000;
 const SIM_DURATION = 80; // Adjusted duration (40 years * 2 steps/year)
 const CANVAS_ID = 'simulationCanvas';
 const HISTOGRAM_SVG_ID = 'histogramSvg';
@@ -17,6 +17,9 @@ let animationFrameId = null;
 let colorScale;
 let isContinuouslyRunning = false; // State for continuous run
 let isProcessingBatch = false; // State for batch run
+let currentSortColumn = 'id'; // Default sort column
+let currentSortDirection = 'asc'; // Default sort direction ('asc' or 'desc')
+let currentAgentsSnapshot = []; // Holds the agents array used for the *last table population*
 
 // --- UI Elements ---
 const startBtn = document.getElementById('startBtn');
@@ -29,61 +32,143 @@ const tickCounter = document.getElementById('tickCounter');
 const statusIndicator = document.getElementById('statusIndicator');
 const canvas = document.getElementById(CANVAS_ID);
 const agentTableBody = document.getElementById('agentTableBody');
+const agentTableHeader = document.querySelector('#agentTable thead');
 
 /**
- * Populates the agent table with initial data. Creates rows and cells.
- * @param {Agent[]} agents - The array of agent objects.
+ * Populates the agent table based on the provided (and potentially sorted) agent list.
+ * Clears and rebuilds the table body.
+ * @param {Agent[]} agentsToDisplay - The array of agent objects to display in the table.
  */
-function populateAgentTable(agents) {
+function populateAgentTable(agentsToDisplay) {
 	if (!agentTableBody) return;
 	agentTableBody.innerHTML = ''; // Clear existing rows
 
-	agents.forEach((agent) => {
+	agentsToDisplay.forEach((agent) => {
 		const row = agentTableBody.insertRow();
-		row.setAttribute('data-agent-id', agent.id); // IMPORTANT: Link row to agent ID
+		row.setAttribute('data-agent-id', agent.id);
 
 		const idCell = row.insertCell();
 		const talentCell = row.insertCell();
 		const capitalCell = row.insertCell();
 
 		idCell.textContent = agent.id;
-		talentCell.textContent = agent.t.toFixed(3); // Format talent
-		capitalCell.textContent = agent.cap.toFixed(2); // Format initial capital
-		capitalCell.classList.add('agent-capital-cell'); // Add class for easier selection (optional)
+		talentCell.textContent = agent.t.toFixed(3);
+		capitalCell.textContent = agent.cap.toFixed(2);
+		capitalCell.classList.add('agent-capital-cell');
 	});
-	console.log(`Agent table populated with ${agents.length} rows.`);
+	updateSortIndicators(); // Update visual indicators on headers
+	// console.log(`Agent table populated/repopulated with ${agentsToDisplay.length} rows.`);
 }
 
 /**
- * Updates only the capital values in the agent table efficiently.
- * @param {Agent[]} agents - The array of agent objects.
+ * Updates only the capital values in the currently displayed agent table.
+ * IMPORTANT: This assumes the table rows are already present and in the correct order
+ *            as determined by the last call to populateAgentTable / sortTable.
  */
-function updateAgentTableCapital(agents) {
-	if (!agentTableBody) return;
+function updateAgentTableCapital() {
+	if (!agentTableBody || currentAgentsSnapshot.length === 0) return;
 
-	// Consider throttling this if performance is still an issue on very fast ticks
-	// For now, update every time draw happens
+	// Update based on the agents currently in the simulation state
+	const currentSimAgents = sim.getAgents();
+	const agentMap = new Map(currentSimAgents.map((agent) => [agent.id, agent])); // Quick lookup
 
-	agents.forEach((agent) => {
-		// Find the row using the data attribute
-		const row = agentTableBody.querySelector(`tr[data-agent-id="${agent.id}"]`);
-		if (row) {
-			// Find the capital cell (assuming it's the last cell, index 2)
-			const capitalCell = row.cells[2]; // Or use querySelector('.agent-capital-cell') if class was added
-			if (capitalCell) {
-				const currentDisplayedCapital = parseFloat(capitalCell.textContent);
-				const newCapital = agent.cap;
-				// Only update DOM if value actually changed (minor optimization)
-				// Use tolerance for floating point comparison if needed
-				if (Math.abs(currentDisplayedCapital - newCapital) > 0.001) {
-					capitalCell.textContent = newCapital.toFixed(2);
-				}
+	// Iterate through the ROWS currently in the table body
+	Array.from(agentTableBody.rows).forEach((row) => {
+		const agentId = row.getAttribute('data-agent-id');
+		const agent = agentMap.get(agentId); // Get current data for this agent
+
+		if (agent && row.cells.length > 2) {
+			const capitalCell = row.cells[2]; // Capital is the 3rd cell (index 2)
+			const currentDisplayedCapital = parseFloat(capitalCell.textContent);
+			const newCapital = agent.cap;
+
+			if (Math.abs(currentDisplayedCapital - newCapital) > 0.001) {
+				capitalCell.textContent = newCapital.toFixed(2);
 			}
-		} else {
-			// This shouldn't happen if populated correctly, but log if it does
-			// console.warn(`Could not find table row for agent ID: ${agent.id}`);
 		}
 	});
+}
+
+/**
+ * Sorts the simulation agents based on the clicked column and updates the table display.
+ * @param {string} column - The identifier ('id', 'talent', 'capital') of the column to sort by.
+ */
+function sortTable(column) {
+	if (!sim) return;
+
+	const agentsToSort = [...sim.getAgents()]; // Create a mutable copy
+
+	// Determine new sort direction
+	if (column === currentSortColumn) {
+		currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+	} else {
+		currentSortColumn = column;
+		currentSortDirection = 'asc'; // Default to ascending for new column
+	}
+
+	// Sorting logic
+	agentsToSort.sort((a, b) => {
+		let valA, valB;
+
+		switch (column) {
+			case 'talent':
+				valA = a.t;
+				valB = b.t;
+				break;
+			case 'capital':
+				valA = a.cap;
+				valB = b.cap;
+				break;
+			case 'id': // String comparison
+			default:
+				valA = a.id;
+				valB = b.id;
+				// Use localeCompare for potentially complex string sorting
+				return currentSortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+		}
+
+		// Numeric comparison
+		return currentSortDirection === 'asc' ? valA - valB : valB - valA;
+	});
+
+	currentAgentsSnapshot = agentsToSort; // Store the newly sorted list
+	populateAgentTable(currentAgentsSnapshot); // Repopulate table with sorted data
+}
+
+/**
+ * Updates the visual indicators (arrows) on the table headers.
+ */
+function updateSortIndicators() {
+	if (!agentTableHeader) return;
+	const headers = agentTableHeader.querySelectorAll('th.sortable-header');
+	headers.forEach((th) => {
+		const column = th.getAttribute('data-column');
+		th.classList.remove('sort-asc', 'sort-desc'); // Remove existing classes
+		if (column === currentSortColumn) {
+			th.classList.add(currentSortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+		}
+	});
+}
+
+// --- Attach Sort Event Listener ---
+function setupTableSorting() {
+	if (!agentTableHeader) return;
+	// Use event delegation on the thead element
+	agentTableHeader.addEventListener('click', (event) => {
+		const header = event.target.closest('th.sortable-header'); // Find the clicked header
+		if (header) {
+			const column = header.getAttribute('data-column');
+			if (column) {
+				// Prevent sorting during active runs if it causes issues (optional)
+				// if (isContinuouslyRunning || isProcessingBatch) {
+				//     console.log("Sorting disabled while simulation is running.");
+				//     return;
+				// }
+				sortTable(column);
+			}
+		}
+	});
+	console.log('Table sorting enabled.');
 }
 
 // --- Core Simulation Step Function ---
@@ -100,7 +185,7 @@ function performTick() {
 
 	// Update drawing and counter
 	draw(sim, colorScale); // Update visualization
-	updateAgentTableCapital(sim.getAgents()); // Fix: Use sim.getAgents() instead of currentAgents
+	updateAgentTableCapital(); // Update table capital values
 	updateTickCounter();
 
 	if (!canContinue || sim.getCurrentTick() >= sim.getMaxTicks()) {
@@ -185,7 +270,7 @@ async function runBatchTicks() {
 			// Update UI every few steps to show progress
 			if (stepsTaken % 5 === 0 || stepsTaken === steps) {
 				draw(sim, colorScale);
-				updateAgentTableCapital(sim.getAgents());
+				updateAgentTableCapital();
 				updateTickCounter();
 				// Allow UI to update
 				await new Promise((resolve) => setTimeout(resolve, 0));
@@ -197,7 +282,7 @@ async function runBatchTicks() {
 
 	// Final updates after batch
 	draw(sim, colorScale); // Draw final state after batch
-	updateAgentTableCapital(sim.getAgents());
+	updateAgentTableCapital();
 	updateTickCounter();
 	isProcessingBatch = false;
 
@@ -223,6 +308,7 @@ function resetSimulation() {
 	sim = new Simulation(GRID_SIZE, NUM_AGENTS, NUM_EVENTS, SIM_DURATION);
 	const initialAgents = sim.getAgents();
 	colorScale = createColorScale(initialAgents); // Recreate scale
+	currentAgentsSnapshot = initialAgents; // Update the snapshot
 
 	populateAgentTable(initialAgents);
 	setupCanvas(canvas, GRID_SIZE);
@@ -265,9 +351,28 @@ function updateUIControls() {
 // --- Initialization ---
 function initialize() {
 	console.log('Initializing simulation...');
+
+	// Set canvas size
 	canvas.width = 603;
 	canvas.height = 603;
-	resetSimulation(); // Use reset to perform initial setup
+
+	// Initialize simulation
+	sim = new Simulation(GRID_SIZE, NUM_AGENTS, NUM_EVENTS, SIM_DURATION);
+	const initialAgents = sim.getAgents();
+	colorScale = createColorScale(initialAgents);
+	currentAgentsSnapshot = initialAgents;
+
+	// Setup UI
+	setupCanvas(canvas, GRID_SIZE);
+	populateAgentTable(initialAgents);
+	draw(sim, colorScale);
+	clearHistogram(HISTOGRAM_SVG_ID);
+	updateTickCounter();
+	statusIndicator.textContent = 'Status: Ready';
+	updateUIControls();
+	setupTableSorting();
+
+	console.log('Initialization complete');
 }
 
 // --- Event Listeners ---

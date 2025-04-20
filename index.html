@@ -8,43 +8,64 @@
 	</head>
 	<body>
 		<h1>Talent vs Luck</h1>
-		<div class="controls">
-			<!-- Basic Run Controls -->
-			<button id="startBtn">Run Continuously</button>
-			<button id="pauseBtn" disabled>Pause</button>
-			<button id="resetBtn">Reset</button>
-			<span id="tickCounter">Tick: 0 / 80</span>
-			<!-- Adjust max ticks if needed -->
-			<hr />
-			<!-- Manual/Batch Controls -->
-			<button id="nextBtn">Next Tick</button>
-			<label for="autoStepsInput">Run Ticks:</label>
-			<input type="number" id="autoStepsInput" value="50" min="1" style="width: 50px" />
-			<button id="autoBtn">Run Batch</button>
-			<span id="statusIndicator" style="margin-left: 10px">Status: Ready</span>
-		</div>
-		<div class="simulation-container">
-			<canvas id="simulationCanvas"></canvas>
-		</div>
-		<div class="table-container">
-			<h2>Agent Data (Real-time)</h2>
-			<div class="table-scroll-wrapper">
-				<table id="agentTable">
-					<thead>
-						<tr>
-							<th>Agent ID</th>
-							<th>Talent</th>
-							<th>Capital</th>
-						</tr>
-					</thead>
-					<tbody id="agentTableBody"></tbody>
-				</table>
+		<!-- Main Layout Container -->
+		<div id="mainLayoutContainer">
+			<!-- Column 1: Controls & Simulation -->
+			<div class="simulation-column">
+				<div class="controls">
+					<!-- Controls content remains the same -->
+					<button id="startBtn">Run Continuously</button>
+					<button id="pauseBtn" disabled>Pause</button>
+					<button id="resetBtn">Reset</button>
+					<span id="tickCounter">Tick: 0 / 80</span>
+					<hr />
+					<button id="nextBtn">Next Tick</button>
+					<label for="autoStepsInput">Run Ticks:</label>
+					<input type="number" id="autoStepsInput" value="50" min="1" style="width: 50px" />
+					<button id="autoBtn">Run Batch</button>
+					<span id="statusIndicator" style="margin-left: 10px">Status: Ready</span>
+				</div>
+				<div class="simulation-container">
+					<canvas id="simulationCanvas"></canvas>
+				</div>
 			</div>
+			<!-- End Column 1 -->
+
+			<!-- Column 2: Table & Histogram -->
+			<div class="data-column">
+				<div class="table-container">
+					<h2>Agent Data (Sortable)</h2>
+					<div class="table-scroll-wrapper">
+						<table id="agentTable">
+							<thead>
+								<tr>
+									<!-- Add data-column attributes and classes for styling -->
+									<th data-column="id" class="sortable-header">
+										Agent ID <span class="sort-indicator"></span>
+									</th>
+									<th data-column="talent" class="sortable-header">
+										Talent <span class="sort-indicator"></span>
+									</th>
+									<th data-column="capital" class="sortable-header">
+										Capital <span class="sort-indicator"></span>
+									</th>
+								</tr>
+							</thead>
+							<tbody id="agentTableBody">
+								<!-- Agent rows will be added here by JavaScript -->
+							</tbody>
+						</table>
+					</div>
+				</div>
+				<div id="histogramContainer">
+					<h2>Final Wealth Distribution</h2>
+					<svg id="histogramSvg"></svg>
+					<!-- Or: <canvas id="histogramCanvas"></canvas> -->
+				</div>
+			</div>
+			<!-- End Column 2 -->
 		</div>
-		<div id="histogramContainer">
-			<h2>Final Wealth Distribution</h2>
-			<svg id="histogramSvg"></svg>
-		</div>
+		<!-- End Main Layout Container -->
 
 		<!-- Load D3 modules via UNPKG -->
 		<script type="importmap">
