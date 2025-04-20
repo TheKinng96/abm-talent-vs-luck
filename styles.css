@@ -99,6 +99,10 @@ h2 {
 	/* Style as before */
 	background-color: #f9f9f9;
 }
+#agentTable tbody tr.selected-row {
+	background-color: #ffffbb !important; /* Light yellow background, !important overrides zebra striping */
+	font-weight: bold; /* Optional: make text bold */
+}
 
 /* --- Sortable Table Header Styles --- */
 .sortable-header {

@@ -20,6 +20,7 @@ let isProcessingBatch = false; // State for batch run
 let currentSortColumn = 'id'; // Default sort column
 let currentSortDirection = 'asc'; // Default sort direction ('asc' or 'desc')
 let currentAgentsSnapshot = []; // Holds the agents array used for the *last table population*
+let selectedAgentId = null;
 
 // --- UI Elements ---
 const startBtn = document.getElementById('startBtn');
@@ -171,6 +172,71 @@ function setupTableSorting() {
 	console.log('Table sorting enabled.');
 }
 
+/**
+ * Sets up the event listener for agent selection via table row clicks.
+ */
+function setupTableSelection() {
+	if (!agentTableBody) return;
+
+	agentTableBody.addEventListener('click', (event) => {
+		const row = event.target.closest('tr'); // Find the clicked table row
+		if (!row || !sim) return; // Exit if click wasn't on a row or sim not ready
+
+		const agentId = row.getAttribute('data-agent-id');
+		if (!agentId) return; // Exit if row has no agent ID
+
+		// Toggle selection
+		if (selectedAgentId === agentId) {
+			selectedAgentId = null; // Deselect if clicking the already selected agent
+			// console.log("Agent deselected:", agentId);
+		} else {
+			selectedAgentId = agentId; // Select the new agent
+			// console.log("Agent selected:", agentId);
+		}
+
+		// Force an immediate redraw to show/hide the highlight
+		// Pass the updated selectedAgentId to draw
+		draw(sim, colorScale, selectedAgentId);
+
+		// Optional: Add visual cue to the selected table row
+		highlightTableRow(selectedAgentId);
+	});
+
+	// Optional: Click on canvas background to deselect
+	canvas.addEventListener('click', (event) => {
+		// Basic check: If click is not near an agent, deselect.
+		// More complex logic could check if the click was on empty space.
+		// For now, let's just allow any canvas click (not on table) to deselect
+		// We need to prevent this if the click originated from the table listener bubbling up.
+		// The table listener above should handle the primary logic.
+		// A simple deselect on any canvas click might be too aggressive.
+		// Let's stick to clicking the row again to deselect for now.
+		// Or add a dedicated "Clear Selection" button if needed.
+	});
+
+	console.log('Table selection enabled.');
+}
+
+/**
+ * Optional: Adds/removes a CSS class to highlight the selected row in the table.
+ * @param {string | null} agentIdToHighlight - The ID of the agent whose row should be highlighted, or null to clear.
+ */
+function highlightTableRow(agentIdToHighlight) {
+	if (!agentTableBody) return;
+	// Remove highlight from previously selected row
+	const previouslySelected = agentTableBody.querySelector('tr.selected-row');
+	if (previouslySelected) {
+		previouslySelected.classList.remove('selected-row');
+	}
+	// Add highlight to the newly selected row
+	if (agentIdToHighlight) {
+		const row = agentTableBody.querySelector(`tr[data-agent-id="${agentIdToHighlight}"]`);
+		if (row) {
+			row.classList.add('selected-row');
+		}
+	}
+}
+
 // --- Core Simulation Step Function ---
 /**
  * Executes a single simulation tick, updates drawing, and checks for completion.
@@ -184,9 +250,12 @@ function performTick() {
 	const canContinue = sim.tick(); // Run one simulation step
 
 	// Update drawing and counter
-	draw(sim, colorScale); // Update visualization
+	draw(sim, colorScale, selectedAgentId); // Update visualization
 	updateAgentTableCapital(); // Update table capital values
 	updateTickCounter();
+
+	// Update histogram in real-time
+	drawHistogram(sim.getAgents(), HISTOGRAM_SVG_ID);
 
 	if (!canContinue || sim.getCurrentTick() >= sim.getMaxTicks()) {
 		finishSimulation();
@@ -269,9 +338,11 @@ async function runBatchTicks() {
 
 			// Update UI every few steps to show progress
 			if (stepsTaken % 5 === 0 || stepsTaken === steps) {
-				draw(sim, colorScale);
+				draw(sim, colorScale, selectedAgentId);
 				updateAgentTableCapital();
 				updateTickCounter();
+				// Update histogram in real-time
+				drawHistogram(sim.getAgents(), HISTOGRAM_SVG_ID);
 				// Allow UI to update
 				await new Promise((resolve) => setTimeout(resolve, 0));
 			}
@@ -284,6 +355,8 @@ async function runBatchTicks() {
 	draw(sim, colorScale); // Draw final state after batch
 	updateAgentTableCapital();
 	updateTickCounter();
+	// Update histogram one final time
+	drawHistogram(sim.getAgents(), HISTOGRAM_SVG_ID);
 	isProcessingBatch = false;
 
 	if (sim.getCurrentTick() >= sim.getMaxTicks()) {
@@ -309,10 +382,12 @@ function resetSimulation() {
 	const initialAgents = sim.getAgents();
 	colorScale = createColorScale(initialAgents); // Recreate scale
 	currentAgentsSnapshot = initialAgents; // Update the snapshot
+	selectedAgentId = null;
+	highlightTableRow(null);
 
 	populateAgentTable(initialAgents);
 	setupCanvas(canvas, GRID_SIZE);
-	draw(sim, colorScale); // Initial draw
+	draw(sim, colorScale, selectedAgentId); // Initial draw
 	clearHistogram(HISTOGRAM_SVG_ID);
 	updateTickCounter();
 	statusIndicator.textContent = 'Status: Ready';
@@ -367,10 +442,13 @@ function initialize() {
 	populateAgentTable(initialAgents);
 	draw(sim, colorScale);
 	clearHistogram(HISTOGRAM_SVG_ID);
+	// Draw initial histogram
+	drawHistogram(initialAgents, HISTOGRAM_SVG_ID);
 	updateTickCounter();
 	statusIndicator.textContent = 'Status: Ready';
 	updateUIControls();
 	setupTableSorting();
+	setupTableSelection();
 
 	console.log('Initialization complete');
 }
