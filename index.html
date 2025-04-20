@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Talent vs Luck Simulation</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>Talent vs Luck</h1>
+    <div class="controls">
+        <button id="startBtn">Start</button>
+        <button id="pauseBtn" disabled>Pause</button>
+        <button id="resetBtn">Reset</button>
+        <label for="speedSlider">Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="tickCounter">Tick: 0 / 500</span>
+    </div>
+    <div class="simulation-container">
+        <canvas id="simulationCanvas"></canvas>
+    </div>
+    <div id="histogramContainer">
+        <h2>Final Wealth Distribution</h2>
+        <svg id="histogramSvg"></svg>
+    </div>
+
+    <!-- Load D3 modules via UNPKG -->
+    <script type="importmap">
+    {
+      "imports": {
+        "d3-array": "https://unpkg.com/d3-array@3?module",
+        "d3-scale": "https://unpkg.com/d3-scale@4?module",
+        "d3-scale-chromatic": "https://unpkg.com/d3-scale-chromatic@3?module",
+        "d3-axis": "https://unpkg.com/d3-axis@3?module",
+        "d3-selection": "https://unpkg.com/d3-selection@3?module",
+        "d3-format": "https://unpkg.com/d3-format@3?module"
+      }
+    }
+    </script>
+    <script type="module" src="src/main.js"></script>
+</body>
+</html>
