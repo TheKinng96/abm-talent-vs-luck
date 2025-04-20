@@ -36,3 +36,44 @@ body {
 	height: 300px;
 	border: 1px solid #eee;
 }
+.table-container {
+	width: 90%; /* Or adjust width as needed */
+	max-width: 800px;
+	margin-top: 20px;
+}
+
+.table-scroll-wrapper {
+	max-height: 400px; /* Limit height and make it scrollable */
+	overflow-y: auto; /* Add vertical scrollbar */
+	border: 1px solid #ccc;
+}
+
+#agentTable {
+	width: 100%;
+	border-collapse: collapse; /* Clean look for borders */
+	font-size: 0.9em;
+}
+
+#agentTable th,
+#agentTable td {
+	border: 1px solid #ddd;
+	padding: 4px 8px; /* Adjust padding */
+	text-align: right; /* Right-align numbers */
+}
+
+#agentTable th {
+	background-color: #f2f2f2; /* Header background */
+	position: sticky; /* Make header sticky */
+	top: 0; /* Stick to the top of the scroll wrapper */
+	z-index: 1; /* Ensure header stays above scrolling content */
+}
+
+#agentTable td:first-child {
+	/* Agent ID column */
+	text-align: left;
+}
+
+/* Optional: Zebra striping for readability */
+#agentTable tbody tr:nth-child(even) {
+	background-color: #f9f9f9;
+}

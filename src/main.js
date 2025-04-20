@@ -28,6 +28,63 @@ const autoBtn = document.getElementById('autoBtn');
 const tickCounter = document.getElementById('tickCounter');
 const statusIndicator = document.getElementById('statusIndicator');
 const canvas = document.getElementById(CANVAS_ID);
+const agentTableBody = document.getElementById('agentTableBody');
+
+/**
+ * Populates the agent table with initial data. Creates rows and cells.
+ * @param {Agent[]} agents - The array of agent objects.
+ */
+function populateAgentTable(agents) {
+	if (!agentTableBody) return;
+	agentTableBody.innerHTML = ''; // Clear existing rows
+
+	agents.forEach((agent) => {
+		const row = agentTableBody.insertRow();
+		row.setAttribute('data-agent-id', agent.id); // IMPORTANT: Link row to agent ID
+
+		const idCell = row.insertCell();
+		const talentCell = row.insertCell();
+		const capitalCell = row.insertCell();
+
+		idCell.textContent = agent.id;
+		talentCell.textContent = agent.t.toFixed(3); // Format talent
+		capitalCell.textContent = agent.cap.toFixed(2); // Format initial capital
+		capitalCell.classList.add('agent-capital-cell'); // Add class for easier selection (optional)
+	});
+	console.log(`Agent table populated with ${agents.length} rows.`);
+}
+
+/**
+ * Updates only the capital values in the agent table efficiently.
+ * @param {Agent[]} agents - The array of agent objects.
+ */
+function updateAgentTableCapital(agents) {
+	if (!agentTableBody) return;
+
+	// Consider throttling this if performance is still an issue on very fast ticks
+	// For now, update every time draw happens
+
+	agents.forEach((agent) => {
+		// Find the row using the data attribute
+		const row = agentTableBody.querySelector(`tr[data-agent-id="${agent.id}"]`);
+		if (row) {
+			// Find the capital cell (assuming it's the last cell, index 2)
+			const capitalCell = row.cells[2]; // Or use querySelector('.agent-capital-cell') if class was added
+			if (capitalCell) {
+				const currentDisplayedCapital = parseFloat(capitalCell.textContent);
+				const newCapital = agent.cap;
+				// Only update DOM if value actually changed (minor optimization)
+				// Use tolerance for floating point comparison if needed
+				if (Math.abs(currentDisplayedCapital - newCapital) > 0.001) {
+					capitalCell.textContent = newCapital.toFixed(2);
+				}
+			}
+		} else {
+			// This shouldn't happen if populated correctly, but log if it does
+			// console.warn(`Could not find table row for agent ID: ${agent.id}`);
+		}
+	});
+}
 
 // --- Core Simulation Step Function ---
 /**
@@ -43,6 +100,7 @@ function performTick() {
 
 	// Update drawing and counter
 	draw(sim, colorScale); // Update visualization
+	updateAgentTableCapital(sim.getAgents()); // Fix: Use sim.getAgents() instead of currentAgents
 	updateTickCounter();
 
 	if (!canContinue || sim.getCurrentTick() >= sim.getMaxTicks()) {
@@ -121,8 +179,17 @@ async function runBatchTicks() {
 	let keepGoing = true;
 	while (stepsTaken < steps && keepGoing) {
 		if (sim.getCurrentTick() < sim.getMaxTicks()) {
-			keepGoing = sim.tick(); // Run tick logic ONLY (no drawing)
+			keepGoing = sim.tick(); // Run tick logic
 			stepsTaken++;
+
+			// Update UI every few steps to show progress
+			if (stepsTaken % 5 === 0 || stepsTaken === steps) {
+				draw(sim, colorScale);
+				updateAgentTableCapital(sim.getAgents());
+				updateTickCounter();
+				// Allow UI to update
+				await new Promise((resolve) => setTimeout(resolve, 0));
+			}
 		} else {
 			keepGoing = false; // Stop if max ticks reached
 		}
@@ -130,6 +197,7 @@ async function runBatchTicks() {
 
 	// Final updates after batch
 	draw(sim, colorScale); // Draw final state after batch
+	updateAgentTableCapital(sim.getAgents());
 	updateTickCounter();
 	isProcessingBatch = false;
 
@@ -153,8 +221,10 @@ function resetSimulation() {
 	}
 
 	sim = new Simulation(GRID_SIZE, NUM_AGENTS, NUM_EVENTS, SIM_DURATION);
-	colorScale = createColorScale(sim.getAgents()); // Recreate scale
+	const initialAgents = sim.getAgents();
+	colorScale = createColorScale(initialAgents); // Recreate scale
 
+	populateAgentTable(initialAgents);
 	setupCanvas(canvas, GRID_SIZE);
 	draw(sim, colorScale); // Initial draw
 	clearHistogram(HISTOGRAM_SVG_ID);
